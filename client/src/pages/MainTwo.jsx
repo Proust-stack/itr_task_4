@@ -18,8 +18,9 @@ import { Spinner } from 'react-bootstrap'
 import { Toolbar } from '@mui/material';
 import BlockIcon from '@mui/icons-material/Block';
 import AccessibilityIcon from '@mui/icons-material/Accessibility';
+import {useNavigate} from "react-router-dom";
 
-import { getAllUsers } from '../http/userAPI'
+import { block, deleteUser, getAllUsers, unBlock } from '../http/userAPI'
 
 const headCells = [
   {
@@ -89,7 +90,27 @@ function EnhancedTableHead(props) {
 }
 
 function EnhancedTableToolbar(props) {
-  const { numSelected, selected } = props;
+  const { numSelected, selected, navigate } = props;
+  const [name, setData] = useState(null)
+
+  const handleBlock = async () => {
+    const data = await block(selected)
+    setData(data)
+    console.log('blocked');
+    navigate('/main')
+  }
+  const handleUnblock = async () => {
+    const data = await unBlock(selected)
+    setData(data)
+    console.log('unblocked');
+    navigate('/main')
+  }
+  const handleDelete = async  () => {
+    const data = await deleteUser(selected)
+    setData(data)
+    console.log('deleted');
+    navigate('/main')
+  }
 
   return (
     <Toolbar
@@ -125,17 +146,17 @@ function EnhancedTableToolbar(props) {
       {numSelected > 0 ? (
         <>
         <Tooltip title="Delete">
-          <IconButton onClick={() => console.log('delete')}>
+          <IconButton onClick={handleDelete}>
             <DeleteIcon color="error"/>
           </IconButton>
         </Tooltip>
         <Tooltip title="Block" color="secondary">
-          <IconButton onClick={() => console.log('block')}>
+          <IconButton onClick={handleBlock}>
             <BlockIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Unblock">
-          <IconButton onClick={() => console.log('unbclock')}>
+          <IconButton onClick={handleUnblock}>
             <AccessibilityIcon color="primary"/>
           </IconButton>
         </Tooltip>
@@ -145,10 +166,14 @@ function EnhancedTableToolbar(props) {
   );
 }
 
+
+
 export default function MainTwo() {
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true)
   const [list, setList] = useState([])
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     getAllUsers().then(data => {
@@ -199,7 +224,7 @@ if (loading) {
   return (
     <Box sx={{ width: '100%' }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
-        <EnhancedTableToolbar numSelected={selected.length} selected={selected}/>
+        <EnhancedTableToolbar numSelected={selected.length} selected={selected} navigate={navigate}/>
         <TableContainer>
           <Table
             sx={{ minWidth: 750 }}

@@ -31,7 +31,7 @@ const LoginPage = observer(() => {
                 data = await registration(email, password, name);
                 user.setUser(data)
                 user.setIsAuth(true)
-                navigate.push(MAIN_PAGE_ROUTE)
+                navigate(MAIN_PAGE_ROUTE)
             }
             
         } catch (e) {

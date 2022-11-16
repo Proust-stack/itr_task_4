@@ -1,5 +1,6 @@
 import {$authHost, $host} from "./index";
 import jwt_decode from "jwt-decode";
+import axios from "axios";
 
 export const registration = async (email, password, name) => {
     const {data} = await $host.post('api/user/registration', {email, password, name})
@@ -22,15 +23,33 @@ export const getAllUsers = async () => {
     const {data} = await $host.get('api/user/list' )
     return data
 }
-export const block = async () => {
-    const {data} = await $host.get('api/user/list' )
+export const block = async (users) => {
+    const {data} = await axios({
+        method: 'put',
+        url: process.env.REACT_APP_API_URL + 'api/user/block',
+        data: {
+            users
+        }
+      });
     return data
 }
-export const unBlock = async () => {
-    const {data} = await $host.get('api/user/list' )
+export const unBlock = async (users) => {
+    const {data} = await axios({
+        method: 'put',
+        url: process.env.REACT_APP_API_URL + 'api/user/unblock',
+        data: {
+            users
+        }
+      });
     return data
 }
-export const delete = async () => {
-    const {data} = await $host.get('api/user/list' )
+export const deleteUser = async (users) => {
+    const {data} = await axios({
+        method: 'delete',
+        url: process.env.REACT_APP_API_URL + 'api/user/delete',
+        data: {
+            users
+        }
+      });
     return data
 }

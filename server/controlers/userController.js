@@ -2,6 +2,7 @@ const ApiError = require('../error/ApiError');
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { User } = require('../models/models')
+const { Op } = require("sequelize");
 
 const generateJwt = (id, email) => {
     return jwt.sign(
@@ -38,11 +39,14 @@ class UserController {
         const { email, password } = req.body
         const user = await User.findOne({ where: { email } })
         if (!user) {
-            return next(ApiError.internal('Пользователь не найден'))
+            return next(ApiError.internal('User is not found'))
+        }
+        if (user.status === 'blocked') {
+            return next(ApiError.internal('User is blocked'))
         }
         let comparePassword = bcrypt.compareSync(password, user.password)
         if (!comparePassword) {
-            return next(ApiError.internal('Указан неверный пароль'))
+            return next(ApiError.internal('Password is not correct'))
         }
         const token = generateJwt(user.id, user.email)
         return res.json({ token })
@@ -58,27 +62,41 @@ class UserController {
         return res.json(types)
     }
     async blockUser(req, res) {
-        const { id } = req.body
-        const candidate = await User.findByPk(id)
-        await candidate.update({ userStatus: "blocked" })
-        return res.status(200).json(id)
+        const { users } = req.body
+        console.log(users);
+        await User.update({ status: "blocked" }, {
+            where: {
+              id: {
+                [Op.eq]: users
+              }
+            }
+          });
+        return res.status(200).json(users)
     }
-    async blockAll(req, res) {
-        const types = await User.findAll({})
-        await types.update({ userStatus: "blocked" })
-        return res.status(200)
-    }
+
     async unblockUser(req, res) {
-        const { id } = req.body
-        const candidate = await User.findByPk(id)
-        await candidate.update({ userStatus: "active" })
-        return res.status(200).json(id)
+        const { users } = req.body
+        console.log(users);
+        await User.update({ status: "active" }, {
+            where: {
+              id: {
+                [Op.eq]: users
+              }
+            }
+          });
+        return res.status(200).json(users)
     }
     async deleteUser(req, res) {
-        const { id } = req.body
-        const candidate = await User.findByPk(id)
-        await candidate.destroy();
-        return res.status(200)
+        const { users } = req.body
+        console.log(users);
+        await User.destroy({
+            where: {
+                id: {
+                  [Op.eq]: users
+                }
+              }
+          });
+        return res.status(200).json(users)
     }
 }
 
