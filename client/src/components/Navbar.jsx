@@ -4,7 +4,7 @@ import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import {NavLink, useNavigate} from "react-router-dom";
 import {LOGIN_ROUTE, MAIN_PAGE_ROUTE} from "../utils/const";
-import {Container, Form, Card} from 'react-bootstrap'
+import {Container} from 'react-bootstrap'
 import {Button} from "react-bootstrap";
 import {observer} from "mobx-react-lite";
 const NavBar = observer(() => {
@@ -28,7 +28,7 @@ const NavBar = observer(() => {
                             onClick={() => logOut()}
                             className="ml-2"
                         >
-                            Выйти
+                            {`Log out id: ${user.user.id}`}
                         </Button>
                     </Nav>
                     :

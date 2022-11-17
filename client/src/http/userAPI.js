@@ -25,7 +25,7 @@ export const getAllUsers = async () => {
 }
 export const block = async (users) => {
     const {data} = await axios({
-        method: 'put',
+        method: 'patch',
         url: process.env.REACT_APP_API_URL + 'api/user/block',
         data: {
             users
@@ -35,7 +35,7 @@ export const block = async (users) => {
 }
 export const unBlock = async (users) => {
     const {data} = await axios({
-        method: 'put',
+        method: 'patch',
         url: process.env.REACT_APP_API_URL + 'api/user/unblock',
         data: {
             users

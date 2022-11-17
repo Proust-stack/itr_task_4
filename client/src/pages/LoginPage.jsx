@@ -4,10 +4,22 @@ import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import Row from "react-bootstrap/Row";
 import {NavLink, useLocation, useNavigate} from "react-router-dom";
+
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 import {login, registration} from "../http/userAPI";
 import {observer} from "mobx-react-lite";
+
 import {Context} from "../index";
 import { LOGIN_ROUTE, MAIN_PAGE_ROUTE, REGISTRATION_ROUTE } from '../utils/const';
+
+ function BasicAlerts({errorMessage}) {
+    return (
+      <Stack sx={{ width: '100%' }} spacing={2}>
+        <Alert severity="error">{errorMessage}</Alert>
+      </Stack>
+    );
+  }
 
 const LoginPage = observer(() => {
     const {user} = useContext(Context)
@@ -18,6 +30,7 @@ const LoginPage = observer(() => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [name, setName] = useState('')
+    const [errorMessage, setErrorMessage] = useState(null)
 
     const click = async () => {
         try {
@@ -35,17 +48,16 @@ const LoginPage = observer(() => {
             }
             
         } catch (e) {
-            //alert(e.response.data.message)
-            console.log(e.message);
+            setErrorMessage(e.response.data.message)
         }
-
     }
 
     return (
         <Container
-            className="d-flex justify-content-center align-items-center"
+            className="d-flex justify-content-center align-items-center flex-column"
             style={{height: window.innerHeight - 54}}
         >
+            {errorMessage ? <BasicAlerts errorMessage={errorMessage}/> : null}
             <Card style={{width: 600}} className="p-5">
                 <h2 className="m-auto">{isLogin ? 'Авторизация' : "Регистрация"}</h2>
                 <Form className="d-flex flex-column">

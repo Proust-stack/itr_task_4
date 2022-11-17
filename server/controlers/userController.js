@@ -20,7 +20,7 @@ class UserController {
         }
         const candidate = await User.findOne({ where: { email } })
         if (candidate) {
-            return next(ApiError.badRequest('The user with this email already exists'))
+            return next(ApiError.badRequest('The user with this email already exists, check you spelling'))
         }
         const hashPassword = await bcrypt.hash(password, 5)
         const user = await User.create({
@@ -41,13 +41,14 @@ class UserController {
         if (!user) {
             return next(ApiError.internal('User is not found'))
         }
-        if (user.status === 'blocked') {
+        if (user.userStatus === 'blocked') {
             return next(ApiError.internal('User is blocked'))
         }
         let comparePassword = bcrypt.compareSync(password, user.password)
         if (!comparePassword) {
             return next(ApiError.internal('Password is not correct'))
         }
+        await user.update({lastLoginDate: Date.now()})
         const token = generateJwt(user.id, user.email)
         return res.json({ token })
     }
@@ -64,24 +65,24 @@ class UserController {
     async blockUser(req, res) {
         const { users } = req.body
         console.log(users);
-        await User.update({ status: "blocked" }, {
+        await User.update({
+            userStatus: "blocked"
+          }, {
             where: {
               id: {
                 [Op.eq]: users
               }
             }
-          });
+          })
         return res.status(200).json(users)
     }
 
     async unblockUser(req, res) {
         const { users } = req.body
         console.log(users);
-        await User.update({ status: "active" }, {
+        await User.update({ userStatus: "active" }, {
             where: {
-              id: {
-                [Op.eq]: users
-              }
+              id: users
             }
           });
         return res.status(200).json(users)
@@ -91,9 +92,7 @@ class UserController {
         console.log(users);
         await User.destroy({
             where: {
-                id: {
-                  [Op.eq]: users
-                }
+                id: users
               }
           });
         return res.status(200).json(users)

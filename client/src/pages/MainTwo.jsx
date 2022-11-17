@@ -1,4 +1,5 @@
 import { alpha } from '@mui/material/styles';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -8,19 +9,55 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
+import TablePagination from '@mui/material/TablePagination';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import DeleteIcon from '@mui/icons-material/Delete';
-import React, { useEffect, useState } from 'react'
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import React, { useEffect, useState, useContext } from 'react'
 import { Spinner } from 'react-bootstrap'
+import moment from 'moment';
 import { Toolbar } from '@mui/material';
 import BlockIcon from '@mui/icons-material/Block';
 import AccessibilityIcon from '@mui/icons-material/Accessibility';
 import {useNavigate} from "react-router-dom";
+import {observer} from "mobx-react-lite";
+import {Context} from "../index";
 
 import { block, deleteUser, getAllUsers, unBlock } from '../http/userAPI'
+
+function descendingComparator(a, b, orderBy) {
+  if (b[orderBy] < a[orderBy]) {
+    return -1;
+  }
+  if (b[orderBy] > a[orderBy]) {
+    return 1;
+  }
+  return 0;
+}
+
+function getComparator(order, orderBy) {
+  return order === 'desc'
+    ? (a, b) => descendingComparator(a, b, orderBy)
+    : (a, b) => -descendingComparator(a, b, orderBy);
+}
+
+// This method is created for cross-browser compatibility, if you don't
+// need to support IE11, you can use Array.prototype.sort() directly
+function stableSort(array, comparator) {
+  const stabilizedThis = array.map((el, index) => [el, index]);
+  stabilizedThis.sort((a, b) => {
+    const order = comparator(a[0], b[0]);
+    if (order !== 0) {
+      return order;
+    }
+    return a[1] - b[1];
+  });
+  return stabilizedThis.map((el) => el[0]);
+}
 
 const headCells = [
   {
@@ -35,7 +72,6 @@ const headCells = [
   },
   {
     id: 'email',
-    numeric: true,
     disablePadding: false,
     label: 'email',
   },
@@ -57,8 +93,11 @@ const headCells = [
 ];
 
 function EnhancedTableHead(props) {
-  const { onSelectAllClick } =
+  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort  } =
     props;
+  const createSortHandler = (property) => (event) => {
+      onRequestSort(event, property);
+    };
 
   return (
     <TableHead>
@@ -90,25 +129,22 @@ function EnhancedTableHead(props) {
 }
 
 function EnhancedTableToolbar(props) {
-  const { numSelected, selected, navigate } = props;
-  const [name, setData] = useState(null)
+  const { numSelected, selected, navigate, setData } = props;
+  
 
   const handleBlock = async () => {
     const data = await block(selected)
     setData(data)
-    console.log('blocked');
     navigate('/main')
   }
   const handleUnblock = async () => {
     const data = await unBlock(selected)
-    setData(data)
-    console.log('unblocked');
+    setData([])
     navigate('/main')
   }
   const handleDelete = async  () => {
     const data = await deleteUser(selected)
     setData(data)
-    console.log('deleted');
     navigate('/main')
   }
 
@@ -161,17 +197,30 @@ function EnhancedTableToolbar(props) {
           </IconButton>
         </Tooltip>
         </>
-      ) : null}
+      ) : (
+        <Tooltip title="Filter list">
+          <IconButton>
+            <FilterListIcon />
+          </IconButton>
+        </Tooltip>
+      )}
     </Toolbar>
   );
 }
 
 
 
-export default function MainTwo() {
+ const MainTwo = observer(() => {
+  const {user} = useContext(Context)
   const [selected, setSelected] = useState([]);
   const [loading, setLoading] = useState(true)
   const [list, setList] = useState([])
+  const [data, setData] = useState([])
+  const [order, setOrder] = React.useState('');
+  const [orderBy, setOrderBy] = React.useState('');
+  const [dense, setDense] = React.useState(false);
+  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [page, setPage] = React.useState(0);
 
   const navigate = useNavigate()
 
@@ -179,7 +228,9 @@ export default function MainTwo() {
     getAllUsers().then(data => {
       setList(data)
     }).finally(() => setLoading(false))
-}, [])
+}, [data])
+
+if (data.includes(user.user.id)) {navigate('/login')}
 
 if (loading) {
   return (
@@ -188,6 +239,16 @@ if (loading) {
     </div>
   )
 }
+
+const handleRequestSort = (event, property) => {
+  const isAsc = orderBy === property && order === 'asc';
+  setOrder(isAsc ? 'desc' : 'asc');
+  setOrderBy(property);
+};
+
+const handleChangeDense = (event) => {
+  setDense(event.target.checked);
+};
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
@@ -198,7 +259,7 @@ if (loading) {
     setSelected([]);
   };
 
-  const handleClick = (event, id) => {
+  const handleClick = (id) => {
     const selectedIndex = selected.indexOf(id);
     let newSelected = [];
 
@@ -218,39 +279,56 @@ if (loading) {
     setSelected(newSelected);
   };
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
 
   const isSelected = (id) => selected.indexOf(id) !== -1;
-
+  const emptyRows =
+  page > 0 ? Math.max(0, (1 + page) * rowsPerPage - list.length) : 0;
+  
   return (
     <Box sx={{ width: '100%' }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
-        <EnhancedTableToolbar numSelected={selected.length} selected={selected} navigate={navigate}/>
+        <EnhancedTableToolbar numSelected={selected.length} selected={selected} navigate={navigate} setData={setData}/>
         <TableContainer>
           <Table
             sx={{ minWidth: 750 }}
             aria-labelledby="tableTitle"
+            size={dense ? 'small' : 'medium'}
           >
             <EnhancedTableHead
               numSelected={selected.length}
+              order={order}
+              orderBy={orderBy}
               onSelectAllClick={handleSelectAllClick}
+              onRequestSort={handleRequestSort}
               rowCount={list.length}
             />
             <TableBody>
               {/* if you don't need to support IE11, you can replace the `stableSort` call with:
                  rows.sort(getComparator(order, orderBy)).slice() */}
               {
-                list.map((row, index) => {
+                stableSort(list, getComparator(order, orderBy))
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row, index) => {
                   const isItemSelected = isSelected(row.id);
                   const labelId = `enhanced-table-checkbox-${index}`;
 
                   return (
                     <TableRow
                       hover
-                      onClick={(event) => handleClick(event, row.id)}
+                      onClick={() => handleClick(row.id)}
                       role="checkbox"
                       aria-checked={isItemSelected}
                       tabIndex={-1}
-                      key={row.name}
+                      key={row.id}
                       selected={isItemSelected}
                     >
                       <TableCell padding="checkbox">
@@ -267,21 +345,46 @@ if (loading) {
                         id={labelId}
                         scope="row"
                         padding="none"
+                        align="left"
                       >
                         {row.id}
                       </TableCell>
-                      <TableCell align="right">{row.name}</TableCell>
-                      <TableCell align="right">{row.email}</TableCell>
-                      <TableCell align="right">{row.userStatus}</TableCell>
-                      <TableCell align="right">{row.registryDate}</TableCell>
-                      <TableCell align="right">{row.lastLoginDate}</TableCell>
+                      <TableCell align="left">{row.name}</TableCell>
+                      <TableCell align="left">{row.email}</TableCell>
+                      <TableCell align="left">{row.userStatus}</TableCell>
+                      <TableCell align="left" type="date">{moment(`${row.registryDate}`).format('MMMM Do YYYY, h:mm:ss a')}</TableCell>
+                      <TableCell align="left" type="date">{moment(`${row.lastLoginDate}`).format('MMMM Do YYYY, h:mm:ss a')}</TableCell>
                     </TableRow>
                   );
                 })}
+                {emptyRows > 0 && (
+                <TableRow
+                  style={{
+                    height: (dense ? 33 : 53) * emptyRows,
+                  }}
+                >
+                  <TableCell colSpan={6} />
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={list.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
       </Paper>
+      <FormControlLabel
+        control={<Switch checked={dense} onChange={handleChangeDense} />}
+        label="Dense padding"
+      />
     </Box>
   );
-}
+})
+
+export default MainTwo
